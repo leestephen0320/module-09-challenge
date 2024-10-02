@@ -1,9 +1,16 @@
+import fs from 'node:fs/promises';
 import dotenv from 'dotenv';
 dotenv.config();
 
 // TODO: Define an interface for the Coordinates object
+interface Coordinates {
+
+}
 
 // TODO: Define a class for the Weather object
+interface Weather {
+  
+}
 
 // TODO: Complete the WeatherService class
 class WeatherService {
