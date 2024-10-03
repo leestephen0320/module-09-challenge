@@ -32,12 +32,12 @@ class WeatherService {
   private async fetchLocationData(query: string) {
     try {
       const response = await fetch(
-        `${this.baseURL}/data/2.5/weather?q=${query}&APPID=${this.apiKey}`
+        `${this.baseURL}/geo/1.0/reverse?${query}&APPID=${this.apiKey}`
       )
 
       const locations = await response.json();
-      const mappedLocations = await this.destructureLocationData(locations.data);
-      return mappedLocations;
+      const LocationData = await this.destructureLocationData(locations.data);
+      return LocationData;
     } catch (err) {
       console.log('Error:',err);
       return err;
@@ -53,13 +53,41 @@ class WeatherService {
     return locationObject;
   }
   // TODO: Create buildGeocodeQuery method
-  // private buildGeocodeQuery(): string {}
+  //? I feel like this part of the code should take some inputs, but it doesn't?
+  //? added some properties, is this ok?
+  private buildGeocodeQuery(coordinates: Coordinates): string {
+    let lat = coordinates.lat;
+    let lon = coordinates.lon;
+    let query = `lat=${lat}&lon=${lon}`;
+    return query;
+  }
   // TODO: Create buildWeatherQuery method
-  // private buildWeatherQuery(coordinates: Coordinates): string {}
+  private buildWeatherQuery(coordinates: Coordinates): string {
+    let lat = this.destructureLocationData(coordinates).lat;
+    let lon = this.destructureLocationData(coordinates).lon;
+    let query = `lat=${lat}&lon=${lon}`;
+    return query;
+  }
   // TODO: Create fetchAndDestructureLocationData method
-  // private async fetchAndDestructureLocationData() {}
+  private async fetchAndDestructureLocationData(coordinates: Coordinates) {
+    return this.fetchLocationData(this.buildGeocodeQuery(coordinates));
+  }
   // TODO: Create fetchWeatherData method
-  // private async fetchWeatherData(coordinates: Coordinates) {}
+  private async fetchWeatherData(coordinates: Coordinates) {
+    try {
+      
+      const response = await fetch(
+        `${this.baseURL}/data/2.5/forecast?${query}&APPID=${this.apiKey}`
+      )
+
+      const locations = await response.json();
+      const LocationData = await this.destructureLocationData(locations.data);
+      return LocationData;
+    } catch (err) {
+      console.log('Error:',err);
+      return err;
+    }
+  }
   // TODO: Build parseCurrentWeather method
   // private parseCurrentWeather(response: any) {}
   // TODO: Complete buildForecastArray method
