@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -10,13 +9,15 @@ interface Coordinates {
 }
 
 // TODO: Define a class for the Weather object
-//? there are like way more, do I need all of them?
-//! for now, just work with the parameters selected. see bottom of code for full list
+//! for now, just work with the parameters selected. see bottom of code for full list seperate main for specfitc things
 interface Weather {
-  id: number;
-  main: string;
-  description: string;
+  city: string;
+  date: string;
   icon: string;
+  iconDescription: string;
+  temp: number;
+  windSpeed: string;
+  humidity: number;
 }
 
 // TODO: Complete the WeatherService class
@@ -32,15 +33,14 @@ class WeatherService {
     this.apiKey = process.env.API_KEY || '';
   }
   // TODO: Create fetchLocationData method
-  private async fetchLocationData(query: string) {
+  private async fetchLocationData(query: string){
     try {
       const response = await fetch(
-        `${this.baseURL}/geo/1.0/reverse?${query}&APPID=${this.apiKey}`
+        `${this.baseURL}${this.buildGeocodeQuery()}${query}&APPID=${this.apiKey}`
       )
 
       const locations = await response.json();
-      const locationData = await this.destructureLocationData(locations.data);
-      return locationData;
+      return locations;
     } catch (err) {
       console.log('Error:',err);
       return err;
@@ -57,11 +57,10 @@ class WeatherService {
   }
   // TODO: Create buildGeocodeQuery method
   //? I feel like this part of the code should take some inputs, but it doesn't?
-  //? added some properties, is this ok?
-  private buildGeocodeQuery(coordinates: Coordinates): string {
-    let lat = this.destructureLocationData(coordinates).lat;
-    let lon = this.destructureLocationData(coordinates).lon;
-    let query = `lat=${lat}&lon=${lon}`;
+  //? added some properties, is this ok? probably not
+  //! it should get the city inside
+  private buildGeocodeQuery(): string {
+    let query = `/geo/1.0/direct?q=`;
     return query;
   }
   // TODO: Create buildWeatherQuery method
@@ -72,13 +71,15 @@ class WeatherService {
     return query;
   }
   // TODO: Create fetchAndDestructureLocationData method
+  //? destructure this into Weather object?
   private async fetchAndDestructureLocationData(coordinates: Coordinates) {
-    return this.fetchLocationData(this.buildGeocodeQuery(coordinates));
+    const destructuredLocation = this.destructureLocationData(coordinates);
+    return this.buildWeatherQuery(destructuredLocation);
   }
   // TODO: Create fetchWeatherData method
   private async fetchWeatherData(coordinates: Coordinates) {
     try {
-      let query = this.buildWeatherQuery(coordinates);
+      let query = this.fetchAndDestructureLocationData(coordinates);
       const response = await fetch(
         `${this.baseURL}/data/2.5/forecast?${query}&APPID=${this.apiKey}`
       )
@@ -93,38 +94,54 @@ class WeatherService {
   }
   // TODO: Build parseCurrentWeather method
   //? 
-  private parseCurrentWeather(response: Weather[]) {
-    const weatherArray: Weather[] = response.map((weather) => {
-      const weatherObject: Weather = {
-        id: weather.id,
-        main: weather.main,
-        description: weather.description,
-        icon: weather.icon,
-      };
+  private parseCurrentWeather(response: Weather) {
+        const weatherObject: Weather = {
+          city: response.city,
+          date: response.date,
+          icon: response.icon,
+          iconDescription: response.iconDescription,
+          temp: response.temp,
+          windSpeed: response.windSpeed,
+          humidity: response.humidity,
+        };
+        return weatherObject;
+    // const weatherArray: Weather[] = response.map((weather) => {
+    //   const weatherObject: Weather = {
+    //     city: weather.city,
+    //     date: weather.date,
+    //     icon: weather.icon,
+    //     iconDescription: weather.iconDescription,
+    //     temp: weather.temp,
+    //     windSpeed: weather.windSpeed,
+    //     humidity: weather.humidity,
+    //   };
 
-      return weatherObject;
-    });
+    //   return weatherObject;
+    // });
 
-    return weatherArray
+    // return weatherArray
   }
   // TODO: Complete buildForecastArray method
   //? i feel like i already ran the functionality of this code in the get by running parseCurrentWeather in fetchWeatherData
-  //private buildForecastArray(currentWeather: Weather, weatherData: any[]) {}
-  // TODO: Complete getWeatherForCity method
-  async getWeatherForCity(city: string) {
-    try {
-      const response = await fetch(
-        `${this.baseURL}/data/2.5/forecast?q=${city}&APPID=${this.apiKey}`
-      )
-
-      const weatherRaw = await response.json();
-      const weatherData = await this.parseCurrentWeather(weatherRaw.data);
-      return weatherData;
-    } catch (err) {
-      console.log('Error:',err);
-      return err;
-    }
+  private buildForecastArray(currentWeather: Weather, weatherData: any[]) {
+    weatherData.map((currentWeather) => 
+      this.parseCurrentWeather(currentWeather));
+    return weatherData;
   }
+  // TODO: Complete getWeatherForCity method
+  // the below code seems too easy to be true. I feel like it somehow needs to incorporate all the previous functions
+  // something like the following flow
+    // use city name to get location data
+    // use location data to get weather data
+    // put weather data in here
+  async getWeatherForCity(city: string) {
+    const locationData = await this.fetchLocationData(city);
+    const coordinates = this.destructureLocationData(locationData);
+    const weatherData = await this.fetchWeatherData(coordinates);
+    let weatherArray: any[] = [];
+    const cityWeather = await this.buildForecastArray(weatherData,weatherArray);
+    return cityWeather;
+}
 }
 
 export default new WeatherService();
