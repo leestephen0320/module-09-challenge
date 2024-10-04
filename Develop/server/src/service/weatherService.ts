@@ -86,7 +86,8 @@ class WeatherService {
 
       const weatherRaw = await response.json();
       const weatherData = await this.parseCurrentWeather(weatherRaw.data);
-      return weatherData;
+      const forecast = await this.buildForecastArray(weatherData,weatherRaw);
+      return forecast;
     } catch (err) {
       console.log('Error:',err);
       return err;
@@ -124,9 +125,10 @@ class WeatherService {
   // TODO: Complete buildForecastArray method
   //? i feel like i already ran the functionality of this code in the get by running parseCurrentWeather in fetchWeatherData
   private buildForecastArray(currentWeather: Weather, weatherData: any[]) {
-    weatherData.map((currentWeather) => 
+    let forecast: Weather[] = [currentWeather];
+    forecast = weatherData.map((currentWeather) => 
       this.parseCurrentWeather(currentWeather));
-    return weatherData;
+    return forecast;
   }
   // TODO: Complete getWeatherForCity method
   // the below code seems too easy to be true. I feel like it somehow needs to incorporate all the previous functions
@@ -138,9 +140,7 @@ class WeatherService {
     const locationData = await this.fetchLocationData(city);
     const coordinates = this.destructureLocationData(locationData);
     const weatherData = await this.fetchWeatherData(coordinates);
-    let weatherArray: any[] = [];
-    const cityWeather = await this.buildForecastArray(weatherData,weatherArray);
-    return cityWeather;
+    return weatherData;
 }
 }
 
