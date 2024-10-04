@@ -7,12 +7,14 @@ import weatherService from '../../service/weatherService.js';
 
 // TODO: POST Request with city name to retrieve weather data
 //? is this how to get the city?
-router.post('/api/weather/:city', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
   // TODO: GET weather data from city name
-  const cityName = req.params.city;
-  const weatherData = await weatherService.getWeatherForCity(cityName);
-  res.json(weatherData);
+  const cityName = req.body.cityName;
+  weatherService.getWeatherForCity(cityName).then((data) => 
+    res.json(data));
+  
+  
   // TODO: save city to search history
   await HistoryService.addCity(cityName);
   } catch (err) {
@@ -22,7 +24,7 @@ router.post('/api/weather/:city', async (req, res) => {
 });
 
 // TODO: GET search history
-router.get('/api/weather/', async (_req, res) => {
+router.get('/history', async (_req, res) => {
   try {
     const savedWeather = await HistoryService.getCities();
     res.json(savedWeather);
@@ -33,7 +35,7 @@ router.get('/api/weather/', async (_req, res) => {
 });
 
 // * BONUS TODO: DELETE city from search history
-router.delete('/api/weather/:id', async (req, res) => {
+router.delete('/history/:id', async (req, res) => {
   try {
     if (!req.params.id) {
       res.status(400).json({ msg: 'City id is required' });

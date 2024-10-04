@@ -34,12 +34,14 @@ class WeatherService {
   }
   // TODO: Create fetchLocationData method
   private async fetchLocationData(query: string){
+    console.log("before try catch of fetch location data");
     try {
       const response = await fetch(
         `${this.baseURL}${this.buildGeocodeQuery()}${query}&APPID=${this.apiKey}`
       )
 
       const locations = await response.json();
+      console.log("fetch location data");
       return locations;
     } catch (err) {
       console.log('Error:',err);
@@ -52,7 +54,7 @@ class WeatherService {
       lon: locationData.lon,
       lat: locationData.lat,
     };
-
+    console.log("destructre loation data");
     return locationObject;
   }
   // TODO: Create buildGeocodeQuery method
@@ -61,6 +63,7 @@ class WeatherService {
   //! it should get the city inside
   private buildGeocodeQuery(): string {
     let query = `/geo/1.0/direct?q=`;
+    console.log("build geocode query");
     return query;
   }
   // TODO: Create buildWeatherQuery method
@@ -68,12 +71,14 @@ class WeatherService {
     let lat = this.destructureLocationData(coordinates).lat;
     let lon = this.destructureLocationData(coordinates).lon;
     let query = `lat=${lat}&lon=${lon}`;
+    console.log("build weather query");
     return query;
   }
   // TODO: Create fetchAndDestructureLocationData method
   //? destructure this into Weather object?
   private async fetchAndDestructureLocationData(coordinates: Coordinates) {
     const destructuredLocation = this.destructureLocationData(coordinates);
+    console.log("fetch and destructure location data");
     return this.buildWeatherQuery(destructuredLocation);
   }
   // TODO: Create fetchWeatherData method
@@ -137,6 +142,7 @@ class WeatherService {
     // use location data to get weather data
     // put weather data in here
   async getWeatherForCity(city: string) {
+    console.log('get weather for city');
     const locationData = await this.fetchLocationData(city);
     const coordinates = this.destructureLocationData(locationData);
     const weatherData = await this.fetchWeatherData(coordinates);
