@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+// import { hasUncaughtExceptionCaptureCallback } from 'node:process'; not called at all for some reason?
 dotenv.config();
 
 // TODO: Define an interface for the Coordinates object
@@ -8,17 +9,20 @@ interface Coordinates {
 }
 
 // TODO: Define a class for the Weather object
-//! for now, just work with the parameters selected. see bottom of code for full list seperate main for specfitc things
 interface Weather {
-  // the code has no idea what city is
-  // 
-  city: Object;
+  name: string;
+  city: string;
+  dt: number;
   date: string;
+  weather: Object;
   icon: string;
   iconDescription: string;
+  main: Object;
   temp: number;
-  windSpeed: string;
+  tempF: number;
   humidity: number;
+  wind: Object;
+  windSpeed: number;
 }
 
 // TODO: Complete the WeatherService class
@@ -39,15 +43,7 @@ class WeatherService {
       const response = await fetch(
         `${this.baseURL}${this.buildGeocodeQuery()}${query}&APPID=${this.apiKey}`
       )
-     console.log(response);
       const locations = await response.json();
-      console.log("fetch location data");
-      console.log("===========================");
-      console.log(`locations: ${locations}`);
-      console.log(locations);
-      console.log("===========================");
-      console.log(`locations.list: ${locations[0].lat}`);
-      console.log("===========================");
 
       return locations[0];
     } catch (err) {
@@ -57,18 +53,10 @@ class WeatherService {
   }
   // TODO: Create destructureLocationData method
   private destructureLocationData(locationData: Coordinates): Coordinates {
-    console.log("===========================");
-    console.log("LocationData");
-    console.log(locationData);
-    console.log("===========================");
     const locationObject: Coordinates = {
       lon: locationData.lon,
       lat: locationData.lat,
     };
-    console.log("===========================");
-    console.log("LocationObject");
-    console.log(locationObject);
-    console.log("===========================");
     return locationObject;
   }
   // TODO: Create buildGeocodeQuery method
@@ -78,41 +66,35 @@ class WeatherService {
   }
   // TODO: Create buildWeatherQuery method
   private buildWeatherQuery(coordinates: Coordinates): string {
-    console.log("===========================");
-    console.log("coordinates");
-    console.log(coordinates);
-    console.log("===========================");
     let lat = this.destructureLocationData(coordinates).lat;
     let lon = this.destructureLocationData(coordinates).lon;
-    console.log("===========================");
-    console.log(lat);
-    console.log(lon);
-    console.log("===========================");
     let query = `lat=${lat}&lon=${lon}`;
-    console.log(query)
-    console.log("build weather query");
     return query;
   }
   // TODO: Create fetchAndDestructureLocationData method
   //? destructure this into Weather object?
   private async fetchAndDestructureLocationData(coordinates: Coordinates) {
     const destructuredLocation = this.destructureLocationData(coordinates);
-    console.log("fetch and destructure location data");
     return this.buildWeatherQuery(destructuredLocation);
+    
   }
   // TODO: Create fetchWeatherData method
   private async fetchWeatherData(coordinates: Coordinates) {
     try {
-      let query = this.fetchAndDestructureLocationData(coordinates);
-      const response = await fetch(
-        `${this.baseURL}/data/2.5/forecast?${query}&APPID=${this.apiKey}`
-      )
-      console.log(`${this.baseURL}/data/2.5/forecast?${query}&APPID=${this.apiKey}`);
-      //console.log(response);
+      let query = await this.fetchAndDestructureLocationData(coordinates);
+      // for forecast data
+      const responseURL = `${this.baseURL}/data/2.5/forecast?${query}&APPID=${this.apiKey}`;
+      const response = await fetch(responseURL);
       const weatherRaw = await response.json();
-      console.log(weatherRaw);
-      const weatherData = await this.parseCurrentWeather(weatherRaw.list);
-      const forecast = await this.buildForecastArray(weatherData,weatherRaw);
+      // for current weather
+      const responseURLCurrent = `${this.baseURL}/data/2.5/weather?${query}&APPID=${this.apiKey}`;
+      const responseCurrent = await fetch(responseURLCurrent);
+      const weatherRawCurrent = await responseCurrent.json();
+      console.log('#########################################################')
+      console.log(weatherRawCurrent);
+      console.log('#########################################################')
+      const forecast = await this.buildForecastArray(weatherRawCurrent,weatherRaw.list);
+      // const forecast = await this.buildForecastArray(weatherRaw,weatherRaw.list);
       return forecast;
     } catch (err) {
       console.log('Error:',err);
@@ -122,48 +104,46 @@ class WeatherService {
   // TODO: Build parseCurrentWeather method
   //? will need to update this as it needs an updated Weather interface with usable parameters
   private parseCurrentWeather(response: Weather) {
-        const weatherObject: Weather = {
-          city: response.city,
-          date: response.date,
-          icon: response.icon,
-          iconDescription: response.iconDescription,
-          temp: response.temp,
-          windSpeed: response.windSpeed,
-          humidity: response.humidity,
-        };
-        return weatherObject;
-    // const weatherArray: Weather[] = response.map((weather) => {
-    //   const weatherObject: Weather = {
-    //     city: weather.city,
-    //     date: weather.date,
-    //     icon: weather.icon,
-    //     iconDescription: weather.iconDescription,
-    //     temp: weather.temp,
-    //     windSpeed: weather.windSpeed,
-    //     humidity: weather.humidity,
-    //   };
 
-    //   return weatherObject;
-    // });
+    const weatherObject: Weather = {
+      name: response.name,
+      city: response.name,
+      dt: response.dt,
+      date: (new Date(response.dt * 1000)).toString(),
+      weather: response.weather,
+      icon: Object.values(response.weather)[0].icon,
+      iconDescription: Object.values(response.weather)[0].description,
+      main: response.main,
+      temp: Object.values(response.main)[0],
+      tempF: 0,
+      humidity: 0,
+      wind: response.wind,
+      windSpeed: Object.values(response.wind)[0],
+    };
+    //convert default kelvin temperature to fahrenheit
+    weatherObject.tempF =  Number(((weatherObject.temp - 273.15) * 1.8 + 32).toFixed(2));
+    // find humidity value from main object of response and assign it to the object
+    for (const [key, value] of Object.entries(response.main)) {
+      if (key === 'humidity') {
+        weatherObject.humidity = value;
+        break
+      }
+    }
 
-    // return weatherArray
+    return weatherObject;
   }
   // TODO: Complete buildForecastArray method
   //? not sure how this code works just yet
   private buildForecastArray(currentWeather: Weather, weatherData: any[]) {
     let forecast: Weather[] = [currentWeather];
-    forecast = weatherData.map((currentWeather) => 
-      this.parseCurrentWeather(currentWeather));
+    forecast = weatherData.map((weatherForecast) => 
+      this.parseCurrentWeather(weatherForecast));
+    const todayWeather = this.parseCurrentWeather(currentWeather);
+    forecast.unshift(todayWeather);
     return forecast;
   }
   // TODO: Complete getWeatherForCity method
-  // the below code seems too easy to be true. I feel like it somehow needs to incorporate all the previous functions
-  // something like the following flow
-    // use city name to get location data
-    // use location data to get weather data
-    // put weather data in here
   async getWeatherForCity(city: string) {
-    console.log('get weather for city');
     const locationData = await this.fetchLocationData(city);
     const coordinates = this.destructureLocationData(locationData);
     const weatherData = await this.fetchWeatherData(coordinates);
@@ -172,51 +152,3 @@ class WeatherService {
 }
 
 export default new WeatherService();
-/*
-cod Internal parameter
-message Internal parameter
-cntA number of timestamps returned in the API response
-list
-list.dt Time of data forecasted, unix, UTC
-list.main
-list.main.temp Temperature. Unit Default: Kelvin, Metric: Celsius, Imperial: Fahrenheit
-list.main.feels_like This temperature parameter accounts for the human perception of weather. Unit Default: Kelvin, Metric: Celsius, Imperial: Fahrenheit
-list.main.temp_min Minimum temperature at the moment of calculation. This is minimal forecasted temperature (within large megalopolises and urban areas), use this parameter optionally. Please find more info here. Unit Default: Kelvin, Metric: Celsius, Imperial: Fahrenheit
-list.main.temp_max Maximum temperature at the moment of calculation. This is maximal forecasted temperature (within large megalopolises and urban areas), use this parameter optionally. Please find more info here. Unit Default: Kelvin, Metric: Celsius, Imperial: Fahrenheit
-list.main.pressure Atmospheric pressure on the sea level by default, hPa
-list.main.sea_level Atmospheric pressure on the sea level, hPa
-list.main.grnd_level Atmospheric pressure on the ground level, hPa
-list.main.humidity Humidity, %
-list.main.temp_kf Internal parameter
-list.weather
-list.weather.id Weather condition id
-list.weather.main Group of weather parameters (Rain, Snow, Clouds etc.)
-list.weather.description Weather condition within the group. Please find more here. You can get the output in your language. Learn more
-list.weather.icon Weather icon id
-list.clouds
-list.clouds.all Cloudiness, %
-list.wind
-list.wind.speed Wind speed. Unit Default: meter/sec, Metric: meter/sec, Imperial: miles/hour
-list.wind.deg Wind direction, degrees (meteorological)
-list.wind.gust Wind gust. Unit Default: meter/sec, Metric: meter/sec, Imperial: miles/hour
-list.visibility Average visibility, metres. The maximum value of the visibility is 10km
-list.pop Probability of precipitation. The values of the parameter vary between 0 and 1, where 0 is equal to 0%, 1 is equal to 100%
-list.rain
-list.rain.3h Rain volume for last 3 hours, mm. Please note that only mm as units of measurement are available for this parameter
-list.snow
-list.snow.3h Snow volume for last 3 hours. Please note that only mm as units of measurement are available for this parameter
-list.sys
-list.sys.pod Part of the day (n - night, d - day)
-list.dt_txt Time of data forecasted, ISO, UTC
-city
-city.id City ID. Please note that built-in geocoder functionality has been deprecated. Learn more here
-city.name City name. Please note that built-in geocoder functionality has been deprecated. Learn more here
-city.coord
-city.coord.lat Geo location, latitude
-city.coord.lon Geo location, longitude
-city.country Country code (GB, JP etc.). Please note that built-in geocoder functionality has been deprecated. Learn more here
-city.population City population
-city.timezone Shift in seconds from UTC
-city.sunrise Sunrise time, Unix, UTC
-city.sunset Sunset time, Unix, UTC
-*/
